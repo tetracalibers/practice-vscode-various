@@ -11,12 +11,23 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "markdown-support-proto.helloWorld",
-        "title": "Hello World"
-      }
-    ]
+    "views": {
+      "markdown-explorer": [
+        {
+          "id": "markdown-outline-treeview",
+          "name": "Outline"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "markdown-explorer",
+          "title": "Markdown",
+          "icon": "$(window)"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "yarn run compile",

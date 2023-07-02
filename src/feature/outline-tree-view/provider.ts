@@ -3,11 +3,18 @@ import { OutlineTreeItem } from "./tree-item";
 
 export class OutlineTreeViewProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
   private readonly _context: vscode.ExtensionContext;
-  private readonly _outline: OutlineTreeItem[];
+  private _outline: OutlineTreeItem[];
 
   constructor(context: vscode.ExtensionContext) {
     this._context = context;
     this._outline = this.parseOutline();
+
+    vscode.window.onDidChangeTextEditorVisibleRanges((e) => {
+      const currentLine = e.visibleRanges[0].start.line;
+      this._outline.forEach((treeitem) => {
+        treeitem.command = this.onClickItem(currentLine, treeitem);
+      });
+    });
   }
 
   private parseOutline() {
@@ -30,14 +37,18 @@ export class OutlineTreeViewProvider implements vscode.TreeDataProvider<vscode.T
         prevLevel = level;
       }
 
-      const position = new vscode.Position(lines.indexOf(heading), 0);
-      const range = document.validateRange(new vscode.Range(position, position.translate(1)));
-      const location = new vscode.Location(document.uri, range);
+      //const position = new vscode.Position(lines.indexOf(heading), 0);
+      //const range = document.validateRange(new vscode.Range(position, position.translate(1)));
+      const lineNumber = lines.indexOf(heading);
+      const currentLine = vscode.window.activeTextEditor?.visibleRanges[0].start.line ?? 0;
+
+      const treeitem = new OutlineTreeItem(document, heading, lineNumber);
+      treeitem.command = this.onClickItem(currentLine, treeitem);
 
       if (prevLevel < level) {
-        acc.at(-1)?.children.push(new OutlineTreeItem(document, heading, location));
+        acc.at(-1)?.children.push(treeitem);
       } else {
-        acc.push(new OutlineTreeItem(document, heading, location));
+        acc.push(treeitem);
       }
 
       prevLevel = level;
@@ -58,5 +69,20 @@ export class OutlineTreeViewProvider implements vscode.TreeDataProvider<vscode.T
     } else {
       return this._outline;
     }
+  }
+
+  private onClickItem(currentLine: number, element: OutlineTreeItem): vscode.Command {
+    const signedDistance = element.lineNumber - currentLine;
+    console.debug(
+      `currentLine: ${currentLine}, element.lineNumber: ${element.lineNumber}, signedDistance: ${signedDistance}`
+    );
+    const direction = signedDistance > 0 ? "down" : "up";
+    const distance = Math.abs(signedDistance);
+
+    return {
+      command: "editorScroll",
+      title: "",
+      arguments: [{ to: direction, by: "line", value: distance, revealCursor: true }]
+    };
   }
 }
